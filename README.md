@@ -9,7 +9,7 @@ source code, allowing you to build the command line tool, without the need to do
 Download the latest [release](./releases), extract it wherever you'd like, and run the tool.
 
 ```shell
-curl -o /tmp/vd-tool.zip https://github.com/rharter/vd-tool/releases/latest/download/vd-tool.zip
+curl -L -o /tmp/vd-tool.zip https://github.com/rharter/vd-tool/releases/latest/download/vd-tool.zip
 mkdir ~/bin
 unzip /tmp/vd-tool.zip -d ~/bin
 ~/bin/vd-tool/bin/vd-tool --help
