@@ -1,0 +1,43 @@
+name: CI
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Gradle Wrapper Validation
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Generate cache key
+        run: .github/scripts/checksum.sh checksum.txt
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('checksum.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle
+
+      - name: Install JDK 11
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: 11
+
+      - name: Fetch Sources
+        run: ./gradlew fetchSources --no-daemon --stacktrace
+
+      - name: Build
+        run: ./gradlew  :tools:base:vector-drawable-tool:assembleDist --no-daemon --stacktrace
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            tools/base/vector-drawable-tool/build/distributions/vd-tool.zip
+            tools/base/vector-drawable-tool/build/distributions/vector-drawable-tool.tar
