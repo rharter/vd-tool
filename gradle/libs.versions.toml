@@ -1,5 +1,5 @@
 [versions]
-android-tools = "30.1.2"
+android-tools = "31.5.1"
 
 [libraries]
 com-android-tools-sdkCommon = { module = "com.android.tools:sdk-common", version.ref = "android-tools" }
