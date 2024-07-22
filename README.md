@@ -17,6 +17,8 @@ unzip /tmp/vd-tool.zip -d ~/bin
 
 ## Building
 
+The Vector Drawable Tool depends on Google's libraries from `com.android.tools` package. Make sure that `android-tools` property at `gradle/libs.versions.toml` is set to the latest stable version from [Google maven repository](https://maven.google.com/web/index.html?#com.android.tools:sdk-common)
+
 Since this repository doesn't contain the actual source code of the tool, you first need to run the
 `fetchSources` task, which will download and extract the source. Then you can use standard `run` and 
 `assembleDist` tasks to build the project.
@@ -25,7 +27,7 @@ Since this repository doesn't contain the actual source code of the tool, you fi
 # First fetch the sources
 ./gradlew fetchSources
 
-# Assemble the distributions
+# Assemble the distributions. The output is at ./tools/base/vector-drawable-tool/build/distibutions/
 ./gradlew assembleDist
 
 # Or simply run the tool directly from Gradle
