@@ -12,17 +12,24 @@ Two Gradle modules:
 
 ## Usage
 
-### SVG → VectorDrawable XML
+### SVG → PNG (single shot)
+
+```shell
+./gradlew render -Pinput=path/to/file.svg [-Poutput=path/to/out.png] [-Psize=1024]
+```
+
+Defaults: `-Poutput` lands `<input-without-ext>.png` next to the SVG;
+`-Psize` falls back to the drawable's intrinsic size.
+
+### Each stage on its own
+
+SVG → VectorDrawable XML:
 
 ```shell
 ./gradlew :svg-to-xml:run --args="path/to/file.svg [-out output/dir]"
 ```
 
-If `-out` is omitted, the XML is written next to the input `.svg`. Distribution
-zip is at `svg-to-xml/build/distributions/svg-to-xml.zip` after running
-`./gradlew :svg-to-xml:assembleDist`.
-
-### VectorDrawable XML → PNG
+VectorDrawable XML → PNG:
 
 ```shell
 ./gradlew :xml-to-png:testDebugUnitTest \
@@ -31,8 +38,8 @@ zip is at `svg-to-xml/build/distributions/svg-to-xml.zip` after running
   [-PvdSize=1024]
 ```
 
-If `-PvdSize` is omitted, the drawable's intrinsic size is used. Output PNG
-matches the LayoutLib/Skia rendering used in Android Studio's editor preview.
+PNG output matches the LayoutLib/Skia rendering used in Android Studio's editor
+preview pane.
 
 ## License
 

@@ -49,15 +49,10 @@ class VdLayoutLibRenderTest {
 
   @Test
   fun render() {
-    val inputPath = requireNotNull(System.getProperty("vd.input")?.takeIf { it.isNotEmpty() }) {
-      "Missing -PvdInput=<path-to-vector-drawable.xml>"
-    }
     val outputPath = requireNotNull(System.getProperty("vd.output")?.takeIf { it.isNotEmpty() }) {
-      "Missing -PvdOutput=<path-to-output.png>"
+      "Missing -Poutput=<path-to-output.png>"
     }
     val sizeOverride = System.getProperty("vd.size")?.takeIf { it.isNotEmpty() }?.toInt()
-
-    require(File(inputPath).exists()) { "Input file does not exist: $inputPath" }
 
     val drawable = paparazzi.context.getDrawable(R.drawable.render_input)
       ?: error("Failed to load R.drawable.render_input")
