@@ -16,7 +16,7 @@ import org.junit.Test
 /**
  * Renders a VectorDrawable XML file through LayoutLib (via Paparazzi) and writes a PNG.
  * Driven by Gradle properties:
- *   ./gradlew :layoutlib-renderer:testDebugUnitTest \
+ *   ./gradlew :xml-to-png:testDebugUnitTest \
  *       -PvdInput=/abs/path/to/in.xml -PvdOutput=/abs/path/to/out.png [-PvdSize=512]
  *
  * If vdSize is omitted, the drawable's intrinsic size (from android:width/height) is used.

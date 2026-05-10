@@ -1,38 +1,39 @@
-# Vector Drawable Tool
+# Vector Drawable Tools
 
-This repository is simply a repackaging of the [vector drawable tool](https://android.googlesource.com/platform/tools/base/+/refs/heads/mirror-goog-studio-main/vector-drawable-tool/)
-from the Android Studio source code. The included Gradle files take care of downloading and extracting the latest
-source code, allowing you to build the command line tool, without the need to download the entire AOSP.
+Two Gradle modules:
+
+- `:svg-to-xml` — Java CLI that converts a single `.svg` file to an Android
+  `VectorDrawable` XML file. Forked from AOSP's
+  [vector-drawable-tool](https://android.googlesource.com/platform/tools/base/+/refs/heads/mirror-goog-studio-main/vector-drawable-tool/),
+  with the rendering path removed and built against the `sdk-common` jar
+  bundled in Android Studio (see `libs/sdk-common-as-bundled.jar`).
+- `:xml-to-png` — Renders a `VectorDrawable` XML file to a PNG via
+  Android Studio's LayoutLib (through Paparazzi), matching the rendering
+  shown in the IDE's drawable preview pane.
 
 ## Usage
 
-Download the latest [release](./releases), extract it wherever you'd like, and run the tool.
+### SVG → VectorDrawable XML
 
 ```shell
-curl -L -o /tmp/vd-tool.zip https://github.com/rharter/vd-tool/releases/latest/download/vd-tool.zip
-mkdir ~/bin
-unzip /tmp/vd-tool.zip -d ~/bin
-~/bin/vd-tool/bin/vd-tool --help
+./gradlew :svg-to-xml:run --args="path/to/file.svg [-out output/dir]"
 ```
 
-## Building
+If `-out` is omitted, the XML is written next to the input `.svg`. Distribution
+zip is at `svg-to-xml/build/distributions/svg-to-xml.zip` after running
+`./gradlew :svg-to-xml:assembleDist`.
 
-The Vector Drawable Tool depends on Google's libraries from `com.android.tools` package. Make sure that `android-tools` property at `gradle/libs.versions.toml` is set to the latest stable version from [Google maven repository](https://maven.google.com/web/index.html?#com.android.tools:sdk-common)
-
-Since this repository doesn't contain the actual source code of the tool, you first need to run the
-`fetchSources` task, which will download and extract the source. Then you can use standard `run` and 
-`assembleDist` tasks to build the project.
+### VectorDrawable XML → PNG
 
 ```shell
-# First fetch the sources
-./gradlew fetchSources
-
-# Assemble the distributions. The output is at ./tools/base/vector-drawable-tool/build/distibutions/
-./gradlew assembleDist
-
-# Or simply run the tool directly from Gradle
-./gradlew run --args="--help"
+./gradlew :xml-to-png:testDebugUnitTest \
+  -PvdInput=path/to/vector.xml \
+  -PvdOutput=path/to/out.png \
+  [-PvdSize=1024]
 ```
+
+If `-PvdSize` is omitted, the drawable's intrinsic size is used. Output PNG
+matches the LayoutLib/Skia rendering used in Android Studio's editor preview.
 
 ## License
 

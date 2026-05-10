@@ -5,14 +5,11 @@ kotlin = "2.1.0"
 paparazzi = "2.0.0-alpha04"
 
 [libraries]
-com-android-tools-sdkCommon = { module = "com.android.tools:sdk-common", version.ref = "android-tools" }
 com-android-tools-common = { module = "com.android.tools:common", version.ref = "android-tools" }
 com-android-tools-annotations = { module = "com.android.tools:annotations", version.ref = "android-tools" }
 com-android-tools-testutils = { module = "com.android.tools:testutils", version.ref = "android-tools" }
 junit = "junit:junit:4.13.2"
 
 [plugins]
-download = { id = "de.undercouch.download", version = "5.7.0" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }

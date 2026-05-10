@@ -1,0 +1,21 @@
+apply plugin: 'com.android.tools.java-library'
+apply plugin: 'application'
+
+application {
+    mainClass.set("com.android.ide.common.vectordrawable.VdCommandLineTool")
+}
+run {
+    workingDir = System.getProperty("user.dir")
+}
+
+base.archivesName.set("svg-to-xml")
+project.distZip.archiveBaseName.set(base.archivesName)
+project.startScripts.applicationName = base.archivesName.get()
+
+dependencies {
+    implementation files("${rootDir}/libs/sdk-common-as-bundled.jar")
+    implementation libs.com.android.tools.common
+    implementation libs.com.android.tools.annotations
+    testImplementation libs.com.android.tools.testutils
+    testImplementation libs.junit
+}

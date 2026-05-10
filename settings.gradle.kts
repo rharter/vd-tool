@@ -13,8 +13,5 @@ dependencyResolutionManagement {
   }
 }
 
-if (file("tools/base/vector-drawable-tool").isDirectory) {
-  include(":tools:base:vector-drawable-tool")
-}
-
-include(":layoutlib-renderer")
+include(":svg-to-xml")
+include(":xml-to-png")
