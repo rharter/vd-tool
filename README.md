@@ -5,8 +5,7 @@ Two Gradle modules:
 - `:svg-to-xml` — Java CLI that converts a single `.svg` file to an Android
   `VectorDrawable` XML file. Forked from AOSP's
   [vector-drawable-tool](https://android.googlesource.com/platform/tools/base/+/refs/heads/mirror-goog-studio-main/vector-drawable-tool/),
-  with the rendering path removed and built against the `sdk-common` jar
-  bundled in Android Studio (see `libs/sdk-common-as-bundled.jar`).
+  with the rendering path removed.
 - `:xml-to-png` — Renders a `VectorDrawable` XML file to a PNG via
   Android Studio's LayoutLib (through Paparazzi), matching the rendering
   shown in the IDE's drawable preview pane.
