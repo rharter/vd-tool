@@ -5,4 +5,6 @@ dependencyResolutionManagement {
   }
 }
 
-include(":tools:base:vector-drawable-tool")
+if (file("tools/base/vector-drawable-tool").isDirectory) {
+  include(":tools:base:vector-drawable-tool")
+}

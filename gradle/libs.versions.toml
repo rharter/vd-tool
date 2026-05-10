@@ -1,5 +1,5 @@
 [versions]
-android-tools = "31.5.1"
+android-tools = "32.2.1"
 
 [libraries]
 com-android-tools-sdkCommon = { module = "com.android.tools:sdk-common", version.ref = "android-tools" }
@@ -9,4 +9,4 @@ com-android-tools-testutils = { module = "com.android.tools:testutils", version.
 junit = "junit:junit:4.13.2"
 
 [plugins]
-download = { id = "de.undercouch.download", version = "5.0.4" }
+download = { id = "de.undercouch.download", version = "5.7.0" }
