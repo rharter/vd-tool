@@ -1,13 +1,17 @@
-// Single-shot SVG -> PNG pipeline.
+// SVG -> PNG (via :svg-to-xml + :xml-to-png):
 //   ./gradlew render -Pinput=foo.svg [-Poutput=foo.png] [-Psize=1024]
-// Or skip the SVG conversion and render an existing VectorDrawable XML:
-//   ./gradlew :xml-to-png:testDebugUnitTest -PvdInput=foo.xml [-PvdOutput=foo.png] [-PvdSize=1024]
+// XML -> PNG (just :xml-to-png):
+//   ./gradlew :xml-to-png:testDebugUnitTest -Pinput=foo.xml [-Poutput=foo.png] [-Psize=1024]
 // Output defaults to <input-without-ext>.png next to the input.
 
-val svgInputPath = project.findProperty("input") as String?
-val xmlInputPath = project.findProperty("vdInput") as String?
-val outputProp = (project.findProperty("output") ?: project.findProperty("vdOutput")) as String?
-val sizeProp = (project.findProperty("size") ?: project.findProperty("vdSize")) as String?
+val inputPath = project.findProperty("input") as String?
+val outputProp = project.findProperty("output") as String?
+val sizeProp = project.findProperty("size") as String?
+val svgInputPath = inputPath?.takeIf { it.endsWith(".svg", ignoreCase = true) }
+val xmlInputPath = inputPath?.takeIf { it.endsWith(".xml", ignoreCase = true) }
+
+fun defaultPngFor(srcFile: File): File =
+  outputProp?.let { file(it) } ?: srcFile.parentFile.resolve("${srcFile.nameWithoutExtension}.png")
 
 fun configureRender(xmlFile: File, pngFile: File, needsSvgConversion: Boolean) {
   project(":xml-to-png").afterEvaluate {
@@ -29,7 +33,6 @@ fun configureRender(xmlFile: File, pngFile: File, needsSvgConversion: Boolean) {
       systemProperty("vd.size", sizeProp ?: "")
       inputs.file(xmlFile)
       outputs.file(pngFile)
-      if (sizeProp != null) inputs.property("vd.size", sizeProp)
     }
   }
 }
@@ -38,8 +41,6 @@ if (svgInputPath != null) {
   val svgFile = file(svgInputPath)
   val xmlDir = layout.buildDirectory.dir("render").get().asFile
   val xmlFile = File(xmlDir, "${svgFile.nameWithoutExtension}.xml")
-  val pngFile = outputProp?.let { file(it) }
-    ?: svgFile.parentFile.resolve("${svgFile.nameWithoutExtension}.png")
 
   project(":svg-to-xml").afterEvaluate {
     tasks.named<JavaExec>("run").configure {
@@ -48,7 +49,7 @@ if (svgInputPath != null) {
     }
   }
 
-  configureRender(xmlFile, pngFile, needsSvgConversion = true)
+  configureRender(xmlFile, defaultPngFor(svgFile), needsSvgConversion = true)
 
   tasks.register("render") {
     group = "build"
@@ -57,8 +58,5 @@ if (svgInputPath != null) {
   }
 } else if (xmlInputPath != null) {
   val xmlFile = file(xmlInputPath)
-  val pngFile = outputProp?.let { file(it) }
-    ?: xmlFile.parentFile.resolve("${xmlFile.nameWithoutExtension}.png")
-
-  configureRender(xmlFile, pngFile, needsSvgConversion = false)
+  configureRender(xmlFile, defaultPngFor(xmlFile), needsSvgConversion = false)
 }

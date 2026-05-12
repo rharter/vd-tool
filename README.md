@@ -33,9 +33,9 @@ VectorDrawable XML → PNG:
 
 ```shell
 ./gradlew :xml-to-png:testDebugUnitTest \
-  -PvdInput=path/to/vector.xml \
-  -PvdOutput=path/to/out.png \
-  [-PvdSize=1024]
+  -Pinput=path/to/vector.xml \
+  [-Poutput=path/to/out.png] \
+  [-Psize=1024]
 ```
 
 PNG output matches the LayoutLib/Skia rendering used in Android Studio's editor
