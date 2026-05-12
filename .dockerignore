@@ -1,0 +1,14 @@
+.git
+.gitignore
+.idea
+*.iml
+.DS_Store
+.claude
+.gradle
+.kotlin
+build
+*/build
+local.properties
+examples
+LICENSE.txt
+README.md

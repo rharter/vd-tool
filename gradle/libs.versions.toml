@@ -1,6 +1,7 @@
 [versions]
 android-tools = "32.2.1"
 agp = "9.2.1"
+kotlin = "2.3.0"
 paparazzi = "2.0.0-alpha04"
 
 [libraries]
@@ -11,4 +12,5 @@ junit = "junit:junit:4.13.2"
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }
