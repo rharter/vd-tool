@@ -14,5 +14,5 @@ dependencyResolutionManagement {
 }
 
 include(":svg-to-xml")
-include(":xml-to-png")
+include(":xml-to-png-direct")
 include(":frontend")

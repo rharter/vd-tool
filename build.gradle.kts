@@ -1,62 +1,46 @@
-// SVG -> PNG (via :svg-to-xml + :xml-to-png):
+// SVG/XML → PNG single-shot CLI, routed through the in-process LayoutLib renderer:
 //   ./gradlew render -Pinput=foo.svg [-Poutput=foo.png] [-Psize=1024]
-// XML -> PNG (just :xml-to-png):
-//   ./gradlew :xml-to-png:testDebugUnitTest -Pinput=foo.xml [-Poutput=foo.png] [-Psize=1024]
-// Output defaults to <input-without-ext>.png next to the input.
+//   ./gradlew render -Pinput=foo.xml [-Poutput=foo.png] [-Psize=1024]
+// (For HTTP/web use, the :frontend module is the same renderer behind a server.)
 
 val inputPath = project.findProperty("input") as String?
 val outputProp = project.findProperty("output") as String?
 val sizeProp = project.findProperty("size") as String?
-val svgInputPath = inputPath?.takeIf { it.endsWith(".svg", ignoreCase = true) }
-val xmlInputPath = inputPath?.takeIf { it.endsWith(".xml", ignoreCase = true) }
 
-fun defaultPngFor(srcFile: File): File =
-  outputProp?.let { file(it) } ?: srcFile.parentFile.resolve("${srcFile.nameWithoutExtension}.png")
+if (inputPath != null) {
+  val inputFile = file(inputPath)
+  val isSvg = inputPath.endsWith(".svg", ignoreCase = true)
+  val pngFile = outputProp?.let { file(it) }
+    ?: inputFile.parentFile.resolve("${inputFile.nameWithoutExtension}.png")
 
-fun configureRender(xmlFile: File, pngFile: File, needsSvgConversion: Boolean) {
-  project(":xml-to-png").afterEvaluate {
-    val drawableDir = file("src/main/res/drawable")
-
-    // Stage the rendered XML into xml-to-png's resources as render_input.xml so it can
-    // be loaded via R.drawable.render_input. Must happen at execution time — at config
-    // time the XML produced by :svg-to-xml:run doesn't exist yet on a first-run SVG.
-    val stageRenderInput = tasks.register<Copy>("stageRenderInput") {
-      if (needsSvgConversion) dependsOn(":svg-to-xml:run")
-      from(xmlFile)
-      rename { "render_input.xml" }
-      into(drawableDir)
+  val xmlFile: File = if (isSvg) {
+    val xmlDir = layout.buildDirectory.dir("render").get().asFile
+    val staged = File(xmlDir, "${inputFile.nameWithoutExtension}.xml")
+    project(":svg-to-xml").afterEvaluate {
+      tasks.named<JavaExec>("run").configure {
+        args = listOf(inputFile.absolutePath, "-out", xmlDir.absolutePath)
+        doFirst { xmlDir.mkdirs() }
+      }
     }
-    tasks.named("preBuild").configure { dependsOn(stageRenderInput) }
-
-    tasks.withType<Test>().configureEach {
-      systemProperty("vd.output", pngFile.absolutePath)
-      systemProperty("vd.size", sizeProp ?: "")
-      inputs.file(xmlFile)
-      outputs.file(pngFile)
-    }
+    staged
+  } else {
+    inputFile
   }
-}
 
-if (svgInputPath != null) {
-  val svgFile = file(svgInputPath)
-  val xmlDir = layout.buildDirectory.dir("render").get().asFile
-  val xmlFile = File(xmlDir, "${svgFile.nameWithoutExtension}.xml")
-
-  project(":svg-to-xml").afterEvaluate {
+  project(":xml-to-png-direct").afterEvaluate {
     tasks.named<JavaExec>("run").configure {
-      args = listOf(svgFile.absolutePath, "-out", xmlDir.absolutePath)
-      doFirst { xmlDir.mkdirs() }
+      if (isSvg) dependsOn(":svg-to-xml:run")
+      args = buildList {
+        add(xmlFile.absolutePath)
+        add(pngFile.absolutePath)
+        if (sizeProp != null) add(sizeProp)
+      }
     }
   }
-
-  configureRender(xmlFile, defaultPngFor(svgFile), needsSvgConversion = true)
 
   tasks.register("render") {
     group = "build"
-    description = "Convert -Pinput.svg to -Poutput.png via :svg-to-xml + :xml-to-png"
-    dependsOn(":xml-to-png:testDebugUnitTest")
+    description = "Convert -Pinput (svg or xml) to -Poutput png"
+    dependsOn(":xml-to-png-direct:run")
   }
-} else if (xmlInputPath != null) {
-  val xmlFile = file(xmlInputPath)
-  configureRender(xmlFile, defaultPngFor(xmlFile), needsSvgConversion = false)
 }

@@ -6,11 +6,15 @@ Three Gradle modules:
   `VectorDrawable` XML file. Forked from AOSP's
   [vector-drawable-tool](https://android.googlesource.com/platform/tools/base/+/refs/heads/mirror-goog-studio-main/vector-drawable-tool/),
   with the rendering path removed.
-- `:xml-to-png` — Renders a `VectorDrawable` XML file to a PNG via
-  Android Studio's LayoutLib (through Paparazzi), matching the rendering
-  shown in the IDE's drawable preview pane.
+- `:xml-to-png-direct` — Renders a `VectorDrawable` XML file to a PNG by
+  driving Android Studio's LayoutLib directly (the same `Bridge` /
+  `RenderSession` that backs the IDE's drawable preview). Plain Kotlin/JVM
+  module — no Android Gradle plugin, no test runner, no Gradle subprocess at
+  render time. Output is byte-identical to the Paparazzi-driven path.
 - `:frontend` — Kotlin/Javalin HTTP server that wraps the pipeline behind an
-  upload UI. Designed for Cloud Run; see [`cloud-run/`](frontend/README.md).
+  upload UI. Initializes the LayoutLib `Bridge` once at startup and renders
+  in-process per request. Designed for Cloud Run; see
+  [`cloud-run/`](cloud-run/README.md).
 
 ## Usage
 
@@ -28,16 +32,13 @@ Defaults: `-Poutput` lands `<input-without-ext>.png` next to the SVG;
 SVG → VectorDrawable XML:
 
 ```shell
-./gradlew :svg-to-xml:run path/to/file.svg [-out output/dir]
+./gradlew :svg-to-xml:run --args="path/to/file.svg -out output/dir"
 ```
 
 VectorDrawable XML → PNG:
 
 ```shell
-./gradlew :xml-to-png:testDebugUnitTest \
-  -Pinput=path/to/vector.xml \
-  [-Poutput=path/to/out.png] \
-  [-Psize=1024]
+./gradlew render -Pinput=path/to/vector.xml [-Poutput=path/to/out.png] [-Psize=1024]
 ```
 
 PNG output matches the LayoutLib/Skia rendering used in Android Studio's editor
@@ -52,11 +53,11 @@ Build and start the server:
 
 ```shell
 ./gradlew :frontend:installDist
-REPO_ROOT=$(pwd) PORT=8080 ./frontend/build/install/frontend/bin/frontend
+PORT=8080 ./frontend/build/install/frontend/bin/frontend
 ```
 
-`REPO_ROOT` is the directory the server `cd`s into to run `./gradlew render` —
-the repo root. `PORT` defaults to `8080`.
+`PORT` defaults to `8080`. The launcher script sets the `LAYOUTLIB_*_JAR`
+environment variables to the bundled layoutlib artifacts.
 
 Open <http://localhost:8080> in a browser and upload an SVG, or hit the
 endpoints directly:
@@ -77,10 +78,10 @@ Error cases return a `4xx` with a `text/plain` reason:
 - No `svg` field → `400 No SVG uploaded.`
 - Non-`.svg` filename → `400 Expected a .svg file.`
 - Non-numeric `size` → `400 Invalid size.`
-- Gradle render failure → `500` with the tail of the Gradle output.
+- Renderer exception → `500` with the exception message.
 
 After code changes to either the Kotlin server or `index.html`, rerun
-`./gradlew :frontend:installDist` and restart the binary. Concurrency=1: the
-Gradle staging task writes to a fixed path, so the server is not safe for
-parallel renders within one process — match the Cloud Run setting locally by
-only firing one `/render` at a time.
+`./gradlew :frontend:installDist` and restart the binary. Renders are
+serialized on a dedicated thread (LayoutLib's Bridge installs a per-thread
+Looper) — Cloud Run's `--concurrency 1` matches this; for local testing,
+fire one `/render` at a time.
