@@ -49,6 +49,11 @@ private fun handleRender(ctx: Context) {
 
     val cmd = buildList {
       add("./gradlew")
+      // Workaround for AGP 9.x: when render_input.xml is rewritten between
+      // builds, the resource-merge incremental state errors with "no data file
+      // for changedFile". A per-request clean of the xml-to-png build dir
+      // resets that state without invalidating the Gradle dep cache.
+      add(":xml-to-png:clean")
       add("render")
       add("-Pinput=${svgPath.absolutePath}")
       add("-Poutput=${pngPath.absolutePath}")
