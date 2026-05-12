@@ -44,12 +44,13 @@
 </head>
 <body>
   <h1>SVG → PNG</h1>
-  <p class="lede">Renders through <code>:svg-to-xml</code> + <code>:xml-to-png</code> (LayoutLib via Paparazzi).</p>
+  <p class="lede">Converts your SVG to an Android <code>VectorDrawable</code> XML, then snapshots that XML through LayoutLib (the same renderer behind Android Studio's drawable preview).</p>
   <form id="f">
     <label for="svg">SVG file</label>
     <input id="svg" name="svg" type="file" accept=".svg,image/svg+xml" required>
     <label for="size">Max dimension (px, optional)</label>
-    <input id="size" name="size" type="number" min="1" max="8192" placeholder="defaults to intrinsic size">
+    <input id="size" name="size" type="number" min="1" max="8192" placeholder="defaults to the drawable's intrinsic size">
+    <small style="display:block; margin-top:0.3rem; opacity:0.7;">Sets the longer dimension of the PNG; the other dimension scales to preserve the SVG's aspect ratio.</small>
     <button id="go" type="submit">Render</button>
   </form>
   <div id="status"></div>

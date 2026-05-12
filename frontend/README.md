@@ -1,23 +1,47 @@
-# Cloud Run deployment
+# `:frontend`
 
-Deploys the `:frontend` Kotlin/Javalin app as a Cloud Run **Service**: HTTP
-frontend with an upload UI; POST an SVG, get the PNG streamed back. The
-container keeps a Gradle daemon warm between requests.
+Kotlin/Javalin HTTP service that wraps the SVG → PNG pipeline behind an upload
+UI. SVG → VectorDrawable XML happens in-process via `Svg2Vector`; XML → PNG
+happens in-process via the `:xml-to-png-direct` renderer (LayoutLib `Bridge` +
+`RenderSession`, no Gradle, no AGP, no test runner).
 
-The container pre-warms Gradle and Paparazzi at image build time, so the first
-render in a fresh container skips dependency download but still pays JVM +
-Gradle startup (~30-60s). Subsequent renders within the same container reuse
-the daemon (~3-5s).
+The container initializes LayoutLib's native `Bridge` once at startup (~1.5 s)
+and reuses it across requests. Each render runs `RenderSession`
+teardown/prepare to invalidate the per-resource `Drawable` cache, so two
+sequential requests against different SVGs return their own outputs.
 
 ## Service contract
 
-- `GET /` — upload UI
-- `POST /render` — multipart form: `svg` (file, required), `size` (int px, optional). Response is `image/png` with `Content-Disposition: attachment`.
-- `GET /healthz` — liveness
+- `GET /` — upload UI (single-page HTML, served from `resources/index.html`).
+- `POST /render` — multipart form: `svg` (file, required), `size` (int px, optional). Response is `image/png` with `Content-Disposition: attachment` and the input filename re-suffixed `.png`.
+- `GET /healthz` — liveness probe target (returns `ok`). Used as Cloud Run's startup probe path.
 
-## One-time setup
+## Threading model
 
-Replace `PROJECT_ID`, `REGION`, `REPO` with your values.
+LayoutLib's `Bridge` installs a per-thread `Looper` at `prepare()`; subsequent
+`RenderSession` use must happen on that same thread. The server pins all
+rendering work — initial `Bridge.init` and every `/render` — to a single
+dedicated `vd-render` thread (a one-thread executor). Cloud Run is deployed
+with `--concurrency=1` so requests don't queue serially within one container,
+but the executor would serialize them safely if concurrency were raised.
+
+## Building locally
+
+From the repo root:
+
+```sh
+./gradlew :frontend:installDist
+PORT=8080 ./frontend/build/install/frontend/bin/frontend
+```
+
+The launcher script exports `LAYOUTLIB_RUNTIME_JAR` and `LAYOUTLIB_RESOURCES_JAR`
+pointing at the bundled layoutlib artifacts in `frontend/build/install/frontend/layoutlib/`.
+`Main.kt` reads those env vars and promotes them to `-D` system properties before
+initializing the renderer.
+
+## Cloud Run deployment
+
+Replace `PROJECT_ID` with your project; the rest matches the deployed `svg-to-png` service.
 
 ```sh
 PROJECT_ID=your-gcp-project
@@ -25,46 +49,56 @@ REGION=us-central1
 REPO=vd-tool
 IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/svg-to-png:latest"
 
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com
+# One-time setup.
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
 gcloud artifacts repositories create $REPO \
     --repository-format=docker --location=$REGION
-```
 
-## Build and push
-
-From the repo root:
-
-```sh
+# Build (Cloud Build runs native amd64; local docker build runs under QEMU on Apple Silicon).
 gcloud builds submit --tag "$IMAGE" .
-```
 
-(Or `docker build -t "$IMAGE" . && docker push "$IMAGE"` if building locally.)
-
-## Deploy
-
-```sh
+# Deploy.
 gcloud run deploy svg-to-png \
     --image "$IMAGE" \
     --region $REGION \
-    --cpu 2 \
-    --memory 4Gi \
+    --memory 2Gi \
+    --cpu 1 \
     --concurrency 1 \
-    --timeout 300 \
+    --timeout 60 \
+    --cpu-boost \
+    --startup-probe="httpGet.path=/healthz,httpGet.port=8080,initialDelaySeconds=0,periodSeconds=2,timeoutSeconds=2,failureThreshold=15" \
     --allow-unauthenticated
 ```
 
-`--concurrency 1` is required: the Gradle staging task writes to a fixed path
-in the resources tree, so two simultaneous renders in one container would
-collide. Cloud Run will spin up more containers under load.
+Notes:
 
-`--allow-unauthenticated` makes the URL public. Drop the flag and front it with
-IAP / a load balancer if you need auth.
+- **`--cpu-boost`** boosts CPU during the first 10 s of container startup; trims
+  ~0.5 s off the cold-start `Bridge.init` cost.
+- **`--startup-probe`** points at `/healthz`. The probe target only responds
+  after `Bridge.init` is complete, so a failed init surfaces as a deploy failure
+  rather than a 500 on the first user request.
+- **`--allow-unauthenticated`** makes the URL public. Drop the flag and front
+  the service with IAP / an HTTPS load balancer for auth.
+- **`--concurrency=1`** isn't strictly required for correctness (the in-process
+  `renderThread` serializes), but it bounds tail latency. Raise to 4–8 if traffic
+  is bursty and lower instance count matters more than p99.
 
-The deploy prints a `https://svg-to-png-…run.app` URL — open it in a browser
-and upload an SVG.
+## Image architecture
+
+`Dockerfile` is multi-stage:
+
+1. **Builder** — `eclipse-temurin:21-jdk-jammy`, runs `./gradlew :frontend:installDist`,
+   then `jlink`s a stripped JRE with just the modules our code needs into `/opt/jre`.
+2. **Runtime** — `debian:bookworm-slim` + `libfreetype6 fontconfig libxrender1`
+   (the native libs LayoutLib calls into), plus the jlink JRE and the
+   `installDist` output. No JDK, no Android SDK, no Gradle at runtime.
+
+Pinned `linux/amd64` because Paparazzi's `layoutlib-runtime` artifact ships an
+amd64-only `layoutlib_jni.so`. Apple Silicon hosts run the image under QEMU
+emulation locally; Cloud Run runs it natively.
 
 ## Tail logs
 
 ```sh
-gcloud run services logs read svg-to-png --region $REGION
+gcloud run services logs read svg-to-png --region us-central1
 ```

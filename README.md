@@ -14,7 +14,7 @@ Three Gradle modules:
 - `:frontend` — Kotlin/Javalin HTTP server that wraps the pipeline behind an
   upload UI. Initializes the LayoutLib `Bridge` once at startup and renders
   in-process per request. Designed for Cloud Run; see
-  [`cloud-run/`](cloud-run/README.md).
+  [`frontend/README.md`](frontend/README.md).
 
 ## Usage
 
