@@ -17,6 +17,12 @@ android {
       // Gradle TestResultsProvider.hasOutput signature that changed in Gradle 9.x.
       // Skip the HTML report so the build status reflects the actual test outcome.
       it.reports.html.required.set(false)
+
+      it.testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStandardStreams = true
+      }
     }
   }
 }

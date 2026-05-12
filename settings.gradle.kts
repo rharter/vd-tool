@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 include(":svg-to-xml")
 include(":xml-to-png")
+include(":frontend")

@@ -1,20 +1,18 @@
-FROM eclipse-temurin:21-jdk-jammy
+# Paparazzi 2.0-alpha04 ships its layoutlib native library (.so) only for
+# linux/amd64. Pin the platform so builds on Apple Silicon (or other arm64
+# hosts) still produce a working amd64 image (run under QEMU locally; Cloud
+# Run's default architecture is amd64).
+FROM --platform=linux/amd64 eclipse-temurin:21-jdk-jammy
 
 ENV ANDROID_HOME=/opt/android-sdk \
     PATH=/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:$PATH \
     DEBIAN_FRONTEND=noninteractive
 
-# Native libs LayoutLib needs at render time, plus tools for SDK install / gcloud.
+# Native libs LayoutLib needs at render time, plus tools for the Android SDK install.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        curl unzip ca-certificates gnupg \
+        curl unzip ca-certificates \
         libfreetype6 fontconfig libxrender1 && \
-    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-        | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
-        > /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends google-cloud-cli && \
     rm -rf /var/lib/apt/lists/*
 
 # Android SDK: cmdline-tools, platform 36, build-tools 36 (matches xml-to-png compileSdk).
@@ -34,14 +32,14 @@ COPY . .
 
 # Pre-warm Gradle deps and AGP/Paparazzi transforms by doing one full render at build
 # time. Bakes the Gradle cache and layoutlib-runtime artifact into an image layer so
-# the first job execution doesn't pay the download cost.
+# the first render in a fresh container doesn't pay the download cost.
 RUN echo "sdk.dir=$ANDROID_HOME" > local.properties && \
     printf '%s\n' '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="red"/></svg>' \
         > /tmp/warmup.svg && \
-    ./gradlew --no-daemon render -Pinput=/tmp/warmup.svg -Poutput=/tmp/warmup.png > /dev/null && \
+    ./gradlew --no-daemon render -Pinput=/tmp/warmup.svg -Poutput=/tmp/warmup.png --stacktrace && \
     rm /tmp/warmup.svg /tmp/warmup.png
 
-COPY cloud-run/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Build the HTTP frontend (Javalin app).
+RUN ./gradlew --no-daemon :frontend:installDist > /dev/null
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/app/frontend/build/install/frontend/bin/frontend"]

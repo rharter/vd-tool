@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SVG → PNG</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 540px;
+      margin: 4rem auto;
+      padding: 0 1.25rem;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.lede { margin-top: 0; opacity: 0.75; }
+    label { display: block; margin: 1.1rem 0 0.3rem; font-weight: 600; }
+    input[type=file], input[type=number] {
+      display: block;
+      width: 100%;
+      padding: 0.5rem;
+      font: inherit;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.6rem 1.2rem;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: progress; }
+    #status {
+      margin-top: 1.25rem;
+      min-height: 1.4em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+    }
+    .err { color: #b00020; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>SVG → PNG</h1>
+  <p class="lede">Renders through <code>:svg-to-xml</code> + <code>:xml-to-png</code> (LayoutLib via Paparazzi).</p>
+  <form id="f">
+    <label for="svg">SVG file</label>
+    <input id="svg" name="svg" type="file" accept=".svg,image/svg+xml" required>
+    <label for="size">Max dimension (px, optional)</label>
+    <input id="size" name="size" type="number" min="1" max="8192" placeholder="defaults to intrinsic size">
+    <button id="go" type="submit">Render</button>
+  </form>
+  <div id="status"></div>
+  <script>
+    const form = document.getElementById('f');
+    const go = document.getElementById('go');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.textContent = 'Rendering…';
+      status.className = '';
+      go.disabled = true;
+      const t0 = performance.now();
+      try {
+        const res = await fetch('/render', { method: 'POST', body: new FormData(form) });
+        if (!res.ok) {
+          status.textContent = `Error ${res.status}: ${await res.text()}`;
+          status.className = 'err';
+          return;
+        }
+        const blob = await res.blob();
+        const cd = res.headers.get('Content-Disposition') || '';
+        const m = cd.match(/filename="?([^";]+)"?/);
+        const name = m ? m[1] : 'output.png';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        const dt = ((performance.now() - t0) / 1000).toFixed(1);
+        status.textContent = `Done in ${dt}s — downloading ${name}.`;
+      } catch (err) {
+        status.textContent = `Network error: ${err.message}`;
+        status.className = 'err';
+      } finally {
+        go.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
