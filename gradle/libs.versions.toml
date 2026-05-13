@@ -1,20 +1,24 @@
 [versions]
 android-tools = "32.2.1"
-agp = "9.2.1"
 kotlin = "2.3.0"
+javalin = "7.2.0"
+logback = "1.5.18"
+logstash-encoder = "8.0"
 paparazzi = "2.0.0-alpha04"
-javalin = "6.3.0"
-slf4j = "2.0.16"
+layoutlib-api = "31.13.2"
+layoutlib = "16.1.1"
 
 [libraries]
 com-android-tools-sdkCommon = { module = "com.android.tools:sdk-common", version.ref = "android-tools" }
 com-android-tools-common = { module = "com.android.tools:common", version.ref = "android-tools" }
 com-android-tools-annotations = { module = "com.android.tools:annotations", version.ref = "android-tools" }
-junit = "junit:junit:4.13.2"
+com-android-tools-layoutlib-api = { module = "com.android.tools.layoutlib:layoutlib-api", version.ref = "layoutlib-api" }
+com-android-tools-layoutlib-runtime = { module = "com.android.tools.layoutlib:layoutlib-runtime", version.ref = "layoutlib" }
+com-android-tools-layoutlib-resources = { module = "com.android.tools.layoutlib:layoutlib-resources", version.ref = "layoutlib" }
 javalin = { module = "io.javalin:javalin", version.ref = "javalin" }
-slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-encoder" }
+paparazzi = { module = "app.cash.paparazzi:paparazzi", version.ref = "paparazzi" }
 
 [plugins]
-android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }

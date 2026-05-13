@@ -3,6 +3,10 @@ plugins {
   application
 }
 
+kotlin {
+  jvmToolchain(21)
+}
+
 application {
   mainClass.set("dev.vdtool.frontend.MainKt")
   // ByteBuddy's dynamic agent install (used by PaparazziSdk for AppCompat/EditMode
@@ -35,17 +39,16 @@ val nativeClassifier = when {
 
 dependencies {
   implementation(libs.javalin)
-  implementation(libs.slf4j.simple)
+  implementation(libs.logback.classic)
+  implementation(libs.logstash.logback.encoder)
   // For Svg2Vector.parseSvgToXml — same artifact :svg-to-xml uses.
   implementation(libs.com.android.tools.sdkCommon)
   implementation(project(":xml-to-png-direct"))
 
   layoutlibRuntimeJar(
-    "com.android.tools.layoutlib:layoutlib-runtime:16.1.1:$nativeClassifier",
+    variantOf(libs.com.android.tools.layoutlib.runtime) { classifier(nativeClassifier) },
   )
-  layoutlibResourcesJar(
-    "com.android.tools.layoutlib:layoutlib-resources:16.1.1",
-  )
+  layoutlibResourcesJar(libs.com.android.tools.layoutlib.resources)
 }
 
 // Stage the resolved layoutlib jars into the installDist output so the launcher script

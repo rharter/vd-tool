@@ -1,0 +1,35 @@
+<configuration>
+  <!--
+    Single JSON line per event on stdout, picked up by Cloud Logging.
+    Field names are remapped to what Cloud Logging expects:
+      level → severity (Cloud Logging recognises DEBUG/INFO/WARN/ERROR
+        case-insensitively; WARN is normalised to WARNING by the agent).
+      @timestamp → time
+      message → message
+    Structured key/value args from logger.atInfo().addKeyValue(k, v) are
+    emitted as top-level fields by the StructuredArguments provider.
+  -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <fieldNames>
+        <timestamp>time</timestamp>
+        <level>severity</level>
+        <thread>thread</thread>
+        <logger>logger</logger>
+        <message>message</message>
+        <version>[ignore]</version>
+        <levelValue>[ignore]</levelValue>
+      </fieldNames>
+      <includeContext>false</includeContext>
+    </encoder>
+  </appender>
+
+  <!-- Jetty / Javalin internals: bump to WARN so the startup banner doesn't
+       spam Cloud Logging with noise on every cold start. -->
+  <logger name="org.eclipse.jetty" level="WARN"/>
+  <logger name="io.javalin" level="WARN"/>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+</configuration>

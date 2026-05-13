@@ -29,17 +29,15 @@ val nativeClassifier = when {
 }
 
 dependencies {
-  implementation("app.cash.paparazzi:paparazzi:2.0.0-alpha04")
-  // Make sure layoutlib-api 31.13.2 wins on the classpath, not 32.x. Paparazzi depends
-  // on 31.13.2 transitively; force in case anything else pulls a newer one.
-  implementation("com.android.tools.layoutlib:layoutlib-api:31.13.2")
+  implementation(libs.paparazzi)
+  // Make sure layoutlib-api wins on the classpath at the version Paparazzi depends on
+  // transitively, not a newer one anything else might pull in.
+  implementation(libs.com.android.tools.layoutlib.api)
 
   layoutlibRuntimeJar(
-    "com.android.tools.layoutlib:layoutlib-runtime:16.1.1:$nativeClassifier",
+    variantOf(libs.com.android.tools.layoutlib.runtime) { classifier(nativeClassifier) },
   )
-  layoutlibResourcesJar(
-    "com.android.tools.layoutlib:layoutlib-resources:16.1.1",
-  )
+  layoutlibResourcesJar(libs.com.android.tools.layoutlib.resources)
 }
 
 application {

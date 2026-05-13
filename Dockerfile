@@ -19,7 +19,7 @@ RUN ./gradlew --no-daemon :frontend:installDist
 RUN jlink \
         --add-modules java.se,jdk.crypto.ec,jdk.unsupported,jdk.zipfs \
         --strip-debug --no-man-pages --no-header-files \
-        --compress=2 \
+        --compress=zip-6 \
         --output /opt/jre
 
 FROM --platform=linux/amd64 debian:bookworm-slim
@@ -33,7 +33,10 @@ COPY --from=builder /opt/jre /opt/jre
 ENV PATH=/opt/jre/bin:$PATH \
     JAVA_HOME=/opt/jre
 
+RUN useradd --system --uid 1001 --home-dir /app --shell /usr/sbin/nologin vd
 WORKDIR /app
-COPY --from=builder /app/frontend/build/install/frontend ./
+COPY --from=builder --chown=vd:vd /app/frontend/build/install/frontend ./
+RUN chown vd:vd /app
+USER vd
 EXPOSE 8080
 ENTRYPOINT ["./bin/frontend"]
