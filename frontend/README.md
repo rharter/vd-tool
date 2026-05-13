@@ -41,26 +41,13 @@ initializing the renderer.
 
 ## Cloud Run deployment
 
-Replace `PROJECT_ID` with your project; the rest matches the deployed `svg-to-png` service.
+Run from the repo root (the Dockerfile lives there). `gcloud run deploy --source .`
+invokes Cloud Build under the hood, builds the image natively on amd64, auto-creates
+an Artifact Registry repo on first deploy, and deploys in one step.
 
 ```sh
-PROJECT_ID=your-gcp-project
-REGION=us-central1
-REPO=vd-tool
-IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/svg-to-png:latest"
-
-# One-time setup.
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
-gcloud artifacts repositories create $REPO \
-    --repository-format=docker --location=$REGION
-
-# Build (Cloud Build runs native amd64; local docker build runs under QEMU on Apple Silicon).
-gcloud builds submit --tag "$IMAGE" .
-
-# Deploy.
-gcloud run deploy svg-to-png \
-    --image "$IMAGE" \
-    --region $REGION \
+gcloud run deploy svg-to-png --source . \
+    --region us-central1 \
     --memory 2Gi \
     --cpu 1 \
     --concurrency 1 \
@@ -70,7 +57,15 @@ gcloud run deploy svg-to-png \
     --allow-unauthenticated
 ```
 
-Notes:
+<details>
+<summary>First-time project setup</summary>
+
+```sh
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
+```
+</details>
+
+Flag notes:
 
 - **`--cpu-boost`** boosts CPU during the first 10 s of container startup; trims
   ~0.5 s off the cold-start `Bridge.init` cost.

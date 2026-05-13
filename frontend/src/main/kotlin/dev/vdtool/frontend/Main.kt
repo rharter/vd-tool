@@ -26,6 +26,12 @@ private val indexHtml: String =
     "index.html missing from resources"
   }.readText()
 private val sizeRegex = Regex("\\d{1,5}")
+// Some SVG exporters emit `NaN`/`Infinity` into path coordinates. Svg2Vector copies them
+// through verbatim (e.g. `LnannanL`), and LayoutLib's native PathParser then rejects the
+// drawable with a misleading `Resources$NotFoundException: ...in current configuration`.
+// Scoped to pathData so legitimate `android:name="banana"` etc. don't trip a false positive.
+private val invalidPathDataRegex =
+  Regex("""android:pathData\s*=\s*"[^"]*(?:nan|infinity)[^"]*"""", RegexOption.IGNORE_CASE)
 
 // LayoutLib's Bridge installs a per-thread Looper during prepare() and snapshot() must
 // run on that same thread. Javalin's request handlers run on Jetty's worker pool, so we
@@ -155,6 +161,12 @@ private fun handleRender(ctx: Context) {
         log.atWarn().addKeyValue("warnings", error).log("svg2vector warnings")
       }
       out.toByteArray()
+    }
+    if (invalidPathDataRegex.containsMatchIn(xmlBytes.decodeToString())) {
+      log.atWarn().log("input contains NaN/Infinity in pathData")
+      ctx.status(HttpStatus.BAD_REQUEST)
+        .result("Input SVG contains unexpected path coordinates. Check child vectors for the offending path.")
+      return
     }
     Files.write(xmlPath, xmlBytes)
 
