@@ -189,15 +189,14 @@ class DirectRenderer : AutoCloseable {
     val drawable = context.getDrawable(R.drawable.render_input)
       ?: error("Failed to load R.drawable.render_input from staged file ${stagedXml.absolutePath}")
 
-    val (w, h) = if (sizeOverride != null) {
-      val intrinsicW = drawable.intrinsicWidth.coerceAtLeast(1)
-      val intrinsicH = drawable.intrinsicHeight.coerceAtLeast(1)
-      val ratio = intrinsicW.toDouble() / intrinsicH.toDouble()
-      if (ratio >= 1.0) sizeOverride to (sizeOverride / ratio).toInt().coerceAtLeast(1)
-      else (sizeOverride * ratio).toInt().coerceAtLeast(1) to sizeOverride
-    } else {
-      drawable.intrinsicWidth.coerceAtLeast(1) to drawable.intrinsicHeight.coerceAtLeast(1)
-    }
+    val intrinsicW = drawable.intrinsicWidth.coerceAtLeast(1)
+    val intrinsicH = drawable.intrinsicHeight.coerceAtLeast(1)
+    // Cap the long side: layoutlib's measure spec on PIXEL_5 (1080x2340) clips beyond ~1080,
+    // and PaparazziSdk downscales output above 1000px regardless. Staying ≤1000 sidesteps both.
+    val longSide = sizeOverride ?: minOf(maxOf(intrinsicW, intrinsicH), MAX_RENDER_DIMENSION)
+    val ratio = intrinsicW.toDouble() / intrinsicH.toDouble()
+    val (w, h) = if (ratio >= 1.0) longSide to (longSide / ratio).toInt().coerceAtLeast(1)
+    else (longSide * ratio).toInt().coerceAtLeast(1) to longSide
 
     val view = ImageView(context).apply {
       setImageDrawable(drawable)
@@ -226,6 +225,8 @@ class DirectRenderer : AutoCloseable {
   }
 
   private companion object {
+    private const val MAX_RENDER_DIMENSION = 1000
+
     private val PLACEHOLDER_VECTOR = """
       <vector xmlns:android="http://schemas.android.com/apk/res/android"
           android:width="24dp" android:height="24dp"
